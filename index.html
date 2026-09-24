@@ -201,6 +201,11 @@
             const saved = localStorage.getItem(SAVE_KEY);
             if (saved) {
                 state = JSON.parse(saved);
+                state.drivers = state.drivers || [];
+                state.drivers.forEach(driver => {
+                    driver.assignedTruckId = driver.assignedTruckId || null;
+                    driver.assignedTrailerId = driver.assignedTrailerId || null;
+                });
                 state.performance = state.performance || [{ day: state.day || 1, money: state.money || 0, profit: 0 }];
                 return true;
             }
@@ -476,8 +481,14 @@
                     <div id="assign-${index}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px dashed #555;">
                         <select id="sel-team-${index}">
                             <option value="">-- Wybierz gotowy zestaw: kierowca + ciężarówka + naczepa --</option>
-                            ${state.drivers.filter(d => d.status === 'Dostępny').flatMap(d => state.trucks.filter(t => t.status === 'Dostępna').flatMap(t => state.trailers.filter(tr => tr.status === 'Dostępna').map(tr => `<option value="${d.id}|${t.id}|${tr.id}">${d.name} + ${t.name} + ${tr.name} (lok.: ${d.location}/${t.location}/${tr.location})</option>`))).join('')}
+                            ${state.drivers.filter(d => d.status === 'Dostępny' && d.assignedTruckId && d.assignedTrailerId).map(d => {
+                                const truck = state.trucks.find(t => t.id === d.assignedTruckId);
+                                const trailer = state.trailers.find(tr => tr.id === d.assignedTrailerId);
+                                if (!truck || !trailer || truck.status !== 'Dostępna' || trailer.status !== 'Dostępna') return '';
+                                return `<option value="${d.id}|${truck.id}|${trailer.id}">${d.name} + ${truck.name} + ${trailer.name}</option>`;
+                            }).join('')}
                         </select>
+                        <p style="color:#aaa;font-size:0.85rem;margin-top:0;">Zestaw jest wybierany z trwałych przypisań w zakładce „Baza i Flota”.</p>
                         <button class="btn btn-success" style="width:100%" onclick="startJob(${index})">Podpisz umowę i rozpocznij</button>
                     </div>
                 </div>
@@ -564,16 +575,56 @@
             html += `</div><hr><h2>Kadry - Kierowcy</h2><div class="grid">`;
             if (state.drivers.length === 0) html += `<p style="grid-column: 1/-1;">Brak pracowników.</p>`;
             state.drivers.forEach(d => {
+                const assignedTruck = state.trucks.find(t => t.id === d.assignedTruckId);
+                const assignedTrailer = state.trailers.find(t => t.id === d.assignedTrailerId);
+                const availableTrucks = state.trucks.filter(t => (t.status === 'Dostępna' || t.id === d.assignedTruckId) && !state.drivers.some(other => other.id !== d.id && other.assignedTruckId === t.id));
+                const availableTrailers = state.trailers.filter(t => (t.status === 'Dostępna' || t.id === d.assignedTrailerId) && !state.drivers.some(other => other.id !== d.id && other.assignedTrailerId === t.id));
                 html += `<div class="card">
                     <h3>${d.name}</h3>
                     <p>Status: <strong>${d.status}</strong> (Lok: ${d.location})</p>
                     <p>Stawka (za km): ${formatMoney(d.salary)}</p>
+                    <p style="margin-bottom:5px;"><strong>Stały zestaw</strong></p>
+                    <select id="driver-truck-${d.id}" ${d.status !== 'Dostępny' ? 'disabled' : ''}>
+                        <option value="">-- wybierz ciężarówkę --</option>
+                        ${availableTrucks.map(t => `<option value="${t.id}" ${t.id === d.assignedTruckId ? 'selected' : ''}>${t.name} (stan: ${t.condition.toFixed(0)}%, lok.: ${t.location})</option>`).join('')}
+                    </select>
+                    <select id="driver-trailer-${d.id}" ${d.status !== 'Dostępny' ? 'disabled' : ''}>
+                        <option value="">-- wybierz naczepę --</option>
+                        ${availableTrailers.map(t => `<option value="${t.id}" ${t.id === d.assignedTrailerId ? 'selected' : ''}>${t.name} (lok.: ${t.location})</option>`).join('')}
+                    </select>
+                    ${d.status === 'Dostępny' ? `<button class="btn btn-info" style="width:100%;" onclick="assignDriverAssets('${d.id}')">Zapisz stały zestaw</button>` : ''}
+                    <p style="color:#aaa;font-size:0.85rem;">Przypisano: ${assignedTruck ? assignedTruck.name : 'brak ciężarówki'} + ${assignedTrailer ? assignedTrailer.name : 'brak naczepy'}</p>
                     ${d.status === 'Dostępny' ? `<button class="btn btn-danger" onclick="fireDriver('${d.id}')">Zwolnij kierowcę</button>` : '<p style="color:#aaa;font-size:0.85rem">Kierowcy w trasie nie można zwolnić.</p>'}
                 </div>`;
             });
 
             html += `</div>`;
             document.getElementById('tab-fleet').innerHTML = html;
+        }
+
+        function assignDriverAssets(driverId) {
+            const driver = state.drivers.find(d => d.id === driverId);
+            const truckId = document.getElementById(`driver-truck-${driverId}`).value;
+            const trailerId = document.getElementById(`driver-trailer-${driverId}`).value;
+            if (!driver || driver.status !== 'Dostępny') {
+                alert('Stały zestaw można zmienić dopiero po zakończeniu trasy.');
+                return;
+            }
+            if (!truckId || !trailerId) {
+                alert('Wybierz ciężarówkę i naczepę, aby zapisać stały zestaw.');
+                return;
+            }
+            const truckTaken = state.drivers.some(other => other.id !== driverId && other.assignedTruckId === truckId);
+            const trailerTaken = state.drivers.some(other => other.id !== driverId && other.assignedTrailerId === trailerId);
+            if (truckTaken || trailerTaken) {
+                alert('Ta ciężarówka lub naczepa jest już przypisana do innego kierowcy.');
+                return;
+            }
+            driver.assignedTruckId = truckId;
+            driver.assignedTrailerId = trailerId;
+            state.logs.unshift(`Przypisano stały zestaw do kierowcy ${driver.name}.`);
+            saveGame();
+            renderAll();
         }
 
         function repairTruck(id, cost) {
