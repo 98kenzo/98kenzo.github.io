@@ -42,6 +42,21 @@
         .progress-fill { background: var(--info); height: 100%; transition: width 0.3s; }
         .progress-empty { background: #666; height: 100%; position: absolute; top:0; left:0; z-index: 1;}
         .progress-cargo { background: var(--success); height: 100%; position: absolute; top:0; z-index: 2; transition: width 0.3s;}
+        .dashboard-panels { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 15px; margin-top: 20px; }
+        .map-panel { min-height: 380px; }
+        .map { position: relative; height: 320px; overflow: hidden; border: 1px solid #444; border-radius: 6px; background: #17252b; background-image: linear-gradient(30deg, rgba(255,255,255,0.04) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,0.04) 87.5%, rgba(255,255,255,0.04)), linear-gradient(150deg, rgba(255,255,255,0.04) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,0.04) 87.5%, rgba(255,255,255,0.04)); background-size: 48px 84px; }
+        .map::after { content: ''; position: absolute; inset: 12% 7%; border: 1px solid rgba(255,255,255,0.12); border-radius: 45% 55% 48% 52%; transform: rotate(-8deg); pointer-events: none; }
+        .map-city { position: absolute; transform: translate(-50%, -50%); z-index: 2; color: #b8c8cc; font-size: 0.7rem; white-space: nowrap; }
+        .map-city::before { content: ''; display: block; width: 5px; height: 5px; margin: 0 auto 2px; border-radius: 50%; background: #91a7ad; }
+        .driver-marker { position: absolute; transform: translate(-50%, -50%); z-index: 4; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: #111; border: 2px solid #fff; font-size: 0.7rem; font-weight: bold; box-shadow: 0 0 0 4px rgba(255,152,0,0.2); }
+        .driver-marker.available { background: var(--success); box-shadow: 0 0 0 4px rgba(76,175,80,0.2); }
+        .map-route { position: absolute; height: 2px; z-index: 3; transform-origin: left center; background: var(--accent); opacity: 0.75; pointer-events: none; }
+        .map-legend { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; color: #aaa; font-size: 0.8rem; }
+        .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; background: var(--accent); }
+        .legend-dot.available { background: var(--success); }
+        .chart-wrap { height: 320px; }
+        #finance-chart { width: 100%; height: 280px; display: block; background: #181827; border-radius: 6px; }
+        @media (max-width: 900px) { .dashboard-panels { grid-template-columns: 1fr; } }
         
         h1, h2, h3, h4 { margin-top: 0; }
         hr { border: 0; border-top: 1px solid #444; margin: 15px 0; }
@@ -56,7 +71,7 @@
 
     <div id="start-screen">
         <h1 style="font-size: 3rem; color: var(--accent); margin-bottom: 10px;">🚚 Truck Tycoon PL</h1>
-        <p style="margin-bottom: 30px; color: #aaa;">Rozbudowany realizm - Puste kilometry, Awarie, Wynajem</p>
+        <p style="margin-bottom: 30px; color: #aaa;">Symulator L</p>
         
         <div class="card" style="width: 350px; text-align: center;">
             <input type="text" id="company-name" placeholder="Wprowadź nazwę firmy (np. Trans-Pol)">
@@ -94,6 +109,17 @@
                     <div>
                         <h3 style="border-bottom: 2px solid #444; padding-bottom: 10px;">Dziennik Finansowy i Zdarzeń</h3>
                         <div class="card" id="dashboard-logs" style="max-height: 550px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+                <div class="dashboard-panels">
+                    <div class="card map-panel">
+                        <h3>Mapa kierowców i aktywności</h3>
+                        <div id="driver-map" class="map"></div>
+                        <div class="map-legend"><span><i class="legend-dot"></i>W trasie</span><span><i class="legend-dot available"></i>Dostępny</span></div>
+                    </div>
+                    <div class="card chart-wrap">
+                        <h3>Wyniki finansowe</h3>
+                        <canvas id="finance-chart" aria-label="Wykres wartości firmy i zysku"></canvas>
                     </div>
                 </div>
             </div>
@@ -175,6 +201,7 @@
             const saved = localStorage.getItem(SAVE_KEY);
             if (saved) {
                 state = JSON.parse(saved);
+                state.performance = state.performance || [{ day: state.day || 1, money: state.money || 0, profit: 0 }];
                 return true;
             }
             return false;
@@ -213,6 +240,7 @@
                 day: 1,
                 trucks: [], trailers: [], drivers: [], activeJobs: [],
                 marketJobs: Array.from({length: 15}, generateRandomJob),
+                performance: [{ day: 1, money: 400000, profit: 0 }],
                 logs: ["Firma założona w Warszawie. Kapitał początkowy: 400 000 PLN. Kup lub wynajmij pierwszą ciężarówkę!"]
             };
             saveGame();
@@ -247,6 +275,7 @@
 
         // --- GŁÓWNA LOGIKA DNI ---
         function nextDay() {
+            const moneyAtStart = state.money;
             state.day++;
             let dailyLogs = [`<strong>--- Symulacja: Dzień ${state.day} ---</strong>`];
             let dailyRent = 0;
@@ -334,6 +363,9 @@
             }
 
             state.logs = dailyLogs.concat(state.logs).slice(0, 60);
+            state.performance = state.performance || [];
+            state.performance.push({ day: state.day, money: state.money, profit: state.money - moneyAtStart });
+            state.performance = state.performance.slice(-30);
             
             saveGame();
             renderAll();
@@ -375,6 +407,55 @@
 
             let logsHtml = state.logs.map(l => `<div class="log-entry">${l}</div>`).join('');
             document.getElementById('dashboard-logs').innerHTML = logsHtml;
+            renderDriverMap();
+            renderFinanceChart();
+        }
+
+        function cityPosition(city) {
+            const cityData = CITIES[city];
+            const xs = Object.values(CITIES).map(c => c.x);
+            const ys = Object.values(CITIES).map(c => c.y);
+            return { left: 8 + ((cityData.x - Math.min(...xs)) / (Math.max(...xs) - Math.min(...xs))) * 84, top: 8 + ((Math.max(...ys) - cityData.y) / (Math.max(...ys) - Math.min(...ys))) * 84 };
+        }
+
+        function renderDriverMap() {
+            const map = document.getElementById('driver-map');
+            if (!map) return;
+            let html = CITY_NAMES.map(city => { const p = cityPosition(city); return `<span class="map-city" style="left:${p.left}%;top:${p.top}%">${city}</span>`; }).join('');
+            state.activeJobs.forEach(job => {
+                const from = cityPosition(job.origin); const to = cityPosition(job.destination);
+                const dx = to.left - from.left; const dy = to.top - from.top;
+                const length = Math.sqrt(dx * dx + dy * dy); const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                html += `<span class="map-route" style="left:${from.left}%;top:${from.top}%;width:${length}%;transform:rotate(${angle}deg)"></span>`;
+            });
+            state.drivers.forEach(driver => {
+                const job = state.activeJobs.find(item => item.driverId === driver.id);
+                const currentCity = job ? (job.progress >= job.emptyDistance ? job.destination : job.origin) : driver.location;
+                const p = cityPosition(currentCity);
+                html += `<span class="driver-marker ${driver.status === 'Dostępny' ? 'available' : ''}" style="left:${p.left}%;top:${p.top}%" title="${driver.name} - ${driver.status}">${driver.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</span>`;
+            });
+            map.innerHTML = html || '<p style="padding:20px;color:#aaa">Zatrudnij kierowcę, aby zobaczyć go na mapie.</p>';
+        }
+
+        function renderFinanceChart() {
+            const canvas = document.getElementById('finance-chart');
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect(); const ratio = window.devicePixelRatio || 1;
+            canvas.width = rect.width * ratio; canvas.height = rect.height * ratio;
+            const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio);
+            const width = rect.width; const height = rect.height; const history = state.performance || [];
+            ctx.clearRect(0, 0, width, height); ctx.font = '12px Segoe UI'; ctx.fillStyle = '#aaa';
+            if (history.length === 0) return;
+            const values = history.map(point => point.money); const min = Math.min(...values, 0); const max = Math.max(...values, 1); const range = max - min || 1;
+            const x = index => 35 + (index / Math.max(history.length - 1, 1)) * (width - 50);
+            const y = value => height - 30 - ((value - min) / range) * (height - 55);
+            ctx.strokeStyle = '#3d3d4d'; ctx.lineWidth = 1;
+            for (let i = 0; i < 4; i++) { const gridY = 15 + i * ((height - 45) / 3); ctx.beginPath(); ctx.moveTo(35, gridY); ctx.lineTo(width - 15, gridY); ctx.stroke(); }
+            ctx.strokeStyle = '#4caf50'; ctx.lineWidth = 3; ctx.beginPath();
+            history.forEach((point, index) => index ? ctx.lineTo(x(index), y(point.money)) : ctx.moveTo(x(index), y(point.money)));
+            ctx.stroke();
+            history.forEach((point, index) => { ctx.fillStyle = point.profit >= 0 ? '#4caf50' : '#f44336'; ctx.beginPath(); ctx.arc(x(index), y(point.money), 4, 0, Math.PI * 2); ctx.fill(); });
+            ctx.fillStyle = '#aaa'; ctx.fillText('Dzień ' + history[0].day, 35, height - 8); ctx.fillText(formatMoney(history[history.length - 1].money), 35, 14);
         }
 
         function toggleAssign(index) {
@@ -393,17 +474,9 @@
                     <button class="btn" style="width:100%" onclick="toggleAssign(${index})">Rozważ Zlecenie</button>
                     
                     <div id="assign-${index}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px dashed #555;">
-                        <select id="sel-truck-${index}">
-                            <option value="">-- Wybierz Ciężarówkę --</option>
-                            ${state.trucks.filter(t => t.status === 'Dostępna').map(t => `<option value="${t.id}">${t.name} (Stan: ${t.condition.toFixed(0)}\%, Lok:${t.location})</option>`).join('')}
-                        </select>
-                        <select id="sel-trailer-${index}">
-                            <option value="">-- Wybierz Naczepę --</option>
-                            ${state.trailers.filter(t => t.status === 'Dostępna').map(t => `<option value="${t.id}">${t.name} (Lok:${t.location})</option>`).join('')}
-                        </select>
-                        <select id="sel-driver-${index}">
-                            <option value="">-- Wybierz Kierowcę --</option>
-                            ${state.drivers.filter(d => d.status === 'Dostępny').map(d => `<option value="${d.id}">${d.name} (${formatMoney(d.salary)}/km, Lok:${d.location})</option>`).join('')}
+                        <select id="sel-team-${index}">
+                            <option value="">-- Wybierz gotowy zestaw: kierowca + ciężarówka + naczepa --</option>
+                            ${state.drivers.filter(d => d.status === 'Dostępny').flatMap(d => state.trucks.filter(t => t.status === 'Dostępna').flatMap(t => state.trailers.filter(tr => tr.status === 'Dostępna').map(tr => `<option value="${d.id}|${t.id}|${tr.id}">${d.name} + ${t.name} + ${tr.name} (lok.: ${d.location}/${t.location}/${tr.location})</option>`))).join('')}
                         </select>
                         <button class="btn btn-success" style="width:100%" onclick="startJob(${index})">Podpisz umowę i rozpocznij</button>
                     </div>
@@ -413,9 +486,8 @@
         }
 
         function startJob(index) {
-            let truckId = document.getElementById(`sel-truck-${index}`).value;
-            let trailerId = document.getElementById(`sel-trailer-${index}`).value;
-            let driverId = document.getElementById(`sel-driver-${index}`).value;
+            const selectedTeam = document.getElementById(`sel-team-${index}`).value;
+            let [driverId, truckId, trailerId] = selectedTeam.split('|');
 
             if (!truckId || !trailerId || !driverId) {
                 alert("Musisz poprawnie przypisać Ciężarówkę, Naczepę oraz Kierowcę.");
@@ -496,6 +568,7 @@
                     <h3>${d.name}</h3>
                     <p>Status: <strong>${d.status}</strong> (Lok: ${d.location})</p>
                     <p>Stawka (za km): ${formatMoney(d.salary)}</p>
+                    ${d.status === 'Dostępny' ? `<button class="btn btn-danger" onclick="fireDriver('${d.id}')">Zwolnij kierowcę</button>` : '<p style="color:#aaa;font-size:0.85rem">Kierowcy w trasie nie można zwolnić.</p>'}
                 </div>`;
             });
 
@@ -511,6 +584,20 @@
                 saveGame(); renderAll();
             } else {
                 alert("Brak środków na wykonanie serwisu!");
+            }
+        }
+
+        function fireDriver(id) {
+            const driver = state.drivers.find(d => d.id === id);
+            if (!driver || driver.status !== 'Dostępny') {
+                alert('Kierowcę można zwolnić dopiero po zakończeniu trasy.');
+                return;
+            }
+            if (confirm(`Czy na pewno chcesz zwolnić kierowcę ${driver.name}?`)) {
+                state.drivers = state.drivers.filter(d => d.id !== id);
+                state.logs.unshift(`Zakończono współpracę z kierowcą: ${driver.name}.`);
+                saveGame();
+                renderAll();
             }
         }
         
