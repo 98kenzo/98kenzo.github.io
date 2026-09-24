@@ -3,42 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Truck Tycoon PL - V2</title>
+    <title>Truck Tycoon PL - Zaawansowany MVP</title>
     <style>
         :root {
-            --bg: #121212; --panel: #1e1e2f; --text: #e0e0e0;
-            --accent: #ff9800; --success: #4caf50; --danger: #f44336; --info: #2196f3; --rental: #9c27b0;
+            --bg: #121212;
+            --panel: #1e1e2f;
+            --text: #e0e0e0;
+            --accent: #ff9800;
+            --success: #4caf50;
+            --danger: #f44336;
+            --info: #2196f3;
+            --rent: #9c27b0;
         }
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        
         .container { display: flex; flex-direction: column; height: 100vh; }
-        .card { background: var(--panel); padding: 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-left: 4px solid #333; position: relative;}
-        .btn { background: var(--accent); color: #111; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        .card { background: var(--panel); padding: 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-left: 4px solid #333; position: relative; }
+        .card.rented { border-left-color: var(--rent); }
+        
+        .btn { background: var(--accent); color: #111; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; margin-top: 5px;}
         .btn:hover { opacity: 0.8; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-success { background: var(--success); color: #fff; }
         .btn-danger { background: var(--danger); color: #fff; }
-        .btn-rental { background: var(--rental); color: #fff; }
+        .btn-info { background: var(--info); color: #fff; }
+        .btn-rent { background: var(--rent); color: #fff; }
+        
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        
         .nav-menu { display: flex; flex-wrap: wrap; gap: 10px; background: #1a1a24; padding: 15px 20px; align-items: center; border-bottom: 2px solid #333; }
         .nav-btn { background: transparent; color: var(--text); border: 1px solid #444; }
         .nav-btn.active { border-color: var(--accent); color: var(--accent); }
-        input, select { background: #2a2a3c; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 10px; }
-        .progress-bg { width: 100%; background: #333; height: 20px; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+        
+        input, select { background: #2a2a3c; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 4px; width: 100%; margin-bottom: 10px; font-size: 0.9rem;}
+        
+        .progress-bg { width: 100%; background: #333; height: 20px; border-radius: 10px; overflow: hidden; margin-top: 10px; position: relative;}
         .progress-fill { background: var(--info); height: 100%; transition: width 0.3s; }
+        .progress-empty { background: #666; height: 100%; position: absolute; top:0; left:0; z-index: 1;}
+        .progress-cargo { background: var(--success); height: 100%; position: absolute; top:0; z-index: 2; transition: width 0.3s;}
+        
         h1, h2, h3, h4 { margin-top: 0; }
         hr { border: 0; border-top: 1px solid #444; margin: 15px 0; }
+        
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; background: #333; margin-left: 5px; vertical-align: middle;}
+        
         #start-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #1e1e2f 0%, #121212 100%); }
         .log-entry { font-size: 0.9rem; padding: 8px 0; border-bottom: 1px solid #333; }
-        .badge { position: absolute; top: 15px; right: 15px; background: var(--rental); color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;}
     </style>
 </head>
 <body>
 
-    <!-- EKRAN STARTOWY -->
     <div id="start-screen">
         <h1 style="font-size: 3rem; color: var(--accent); margin-bottom: 10px;">🚚 Truck Tycoon PL</h1>
-        <p style="margin-bottom: 30px; color: #aaa;">Symulator logistyki - V2 (Realistyczne trasy i wynajem)</p>
+        <p style="margin-bottom: 30px; color: #aaa;">Rozbudowany realizm - Puste kilometry, Awarie, Wynajem</p>
         
         <div class="card" style="width: 350px; text-align: center;">
             <input type="text" id="company-name" placeholder="Wprowadź nazwę firmy (np. Trans-Pol)">
@@ -47,9 +65,7 @@
         </div>
     </div>
 
-    <!-- UI GRY -->
     <div id="game-screen" class="container" style="display: none;">
-        
         <nav class="nav-menu">
             <h2 id="top-company" style="margin: 0; flex-grow: 1; color: var(--accent);">Firma</h2>
             <div style="font-size: 1.1rem;">📅 <span id="top-day">Dzień: 1</span></div>
@@ -63,7 +79,7 @@
 
         <div style="padding: 20px; overflow-y: auto; flex-grow: 1;">
             
-            <!-- PANEL GŁÓWNY -->
+            <!-- DASHBOARD -->
             <div id="tab-dashboard" class="tab-content">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Status Operacyjny</h2>
@@ -72,7 +88,7 @@
                 
                 <div class="grid">
                     <div>
-                        <h3 style="border-bottom: 2px solid #444; padding-bottom: 10px;">Ciężarówki w trasie / Działania operacyjne</h3>
+                        <h3 style="border-bottom: 2px solid #444; padding-bottom: 10px;">Zespoły w trasie</h3>
                         <div id="dashboard-active"></div>
                     </div>
                     <div>
@@ -85,7 +101,7 @@
             <!-- GIEŁDA -->
             <div id="tab-market" class="tab-content" style="display: none;">
                 <h2>Giełda Ofert (Dostępne Zlecenia)</h2>
-                <p style="color: #aaa;">Jeżeli Twoja ciężarówka jest w innym mieście niż start zlecenia, system doliczy "puste kilometry" na dojazd (strata czasu i paliwa).</p>
+                <p style="color: #aaa;">Uwaga na <strong>puste kilometry</strong>. Zwróć uwagę, gdzie obecnie znajduje się Twój kierowca i ciężarówka. Dojazd na załadunek kosztuje czas i paliwo!</p>
                 <div id="market-list" class="grid"></div>
             </div>
 
@@ -99,53 +115,55 @@
     </div>
 
     <script>
-        // --- DANE I MAPA Z KORDYNATAMI ---
-        const SAVE_KEY = 'truckTycoonSaveDataV2';
+        const SAVE_KEY = 'truckTycoonSaveData_v2';
         
-        // Współrzędne do obliczania realistycznych dystansów
+        // System koordynatów do obliczania dystansu
         const CITIES = {
-            "Warszawa": {x: 21.0, y: 52.2}, "Berlin": {x: 13.4, y: 52.5},
-            "Paryż": {x: 2.3, y: 48.8}, "Praga": {x: 14.4, y: 50.0},
+            "Warszawa": {x: 21.0, y: 52.2}, "Berlin": {x: 13.4, y: 52.5}, 
+            "Paryż": {x: 2.3, y: 48.8}, "Praga": {x: 14.4, y: 50.0}, 
             "Wiedeń": {x: 16.3, y: 48.2}, "Madryt": {x: -3.7, y: 40.4},
-            "Rzym": {x: 12.5, y: 41.9}, "Amsterdam": {x: 4.9, y: 52.3},
-            "Bruksela": {x: 4.3, y: 50.8}, "Oslo": {x: 10.7, y: 59.9},
+            "Rzym": {x: 12.5, y: 41.9}, "Amsterdam": {x: 4.9, y: 52.3}, 
+            "Bruksela": {x: 4.3, y: 50.8}, "Oslo": {x: 10.7, y: 59.9}, 
             "Londyn": {x: -0.1, y: 51.5}, "Budapeszt": {x: 19.0, y: 47.4}
         };
         const CITY_NAMES = Object.keys(CITIES);
-        
+
         const CARGO = [
-            { name: "Elektronika (Lekkie)", weight: 6 }, { name: "Części samochodowe", weight: 12 },
-            { name: "Materiały budowlane", weight: 24 }, { name: "Żywność chłodzona", weight: 18 },
+            { name: "Elektronika (Lekkie)", weight: 6 },
+            { name: "Części samochodowe", weight: 12 },
+            { name: "Materiały budowlane", weight: 24 },
+            { name: "Żywność chłodzona", weight: 18 },
             { name: "Maszyny rolnicze", weight: 22 }
         ];
         
         const TRUCKS_SHOP = [
-            { id: 't1', name: 'Scania R450', price: 150000, rentCost: 550, fuelPer100: 28 },
-            { id: 't2', name: 'Volvo FH16', price: 210000, rentCost: 750, fuelPer100: 31 },
-            { id: 't3', name: 'MAN TGX', price: 125000, rentCost: 450, fuelPer100: 27 },
-            { id: 't4', name: 'DAF XF 480', price: 140000, rentCost: 500, fuelPer100: 26 },
+            { id: 't1', name: 'Scania R450', price: 150000, fuelPer100: 28, rentInit: 3000, rentDaily: 500 },
+            { id: 't2', name: 'Volvo FH16', price: 210000, fuelPer100: 31, rentInit: 4000, rentDaily: 700 },
+            { id: 't3', name: 'MAN TGX', price: 125000, fuelPer100: 27, rentInit: 2500, rentDaily: 400 },
+            { id: 't4', name: 'DAF XF 480', price: 140000, fuelPer100: 26, rentInit: 2800, rentDaily: 450 },
         ];
         
         const TRAILERS_SHOP = [
-            { id: 'tr1', name: 'Standardowa Plandeka', price: 40000, rentCost: 150 },
-            { id: 'tr2', name: 'Chłodnia', price: 65000, rentCost: 250 },
-            { id: 'tr3', name: 'Naczepa Wywrotka', price: 45000, rentCost: 180 }
+            { id: 'tr1', name: 'Standardowa Plandeka', price: 40000, rentInit: 1000, rentDaily: 150 },
+            { id: 'tr2', name: 'Chłodnia', price: 65000, rentInit: 1500, rentDaily: 250 },
+            { id: 'tr3', name: 'Naczepa Wywrotka', price: 45000, rentInit: 1200, rentDaily: 200 }
         ];
         
         const FIRST_NAMES = ["Jan", "Piotr", "Tomasz", "Marek", "Krzysztof", "Michał", "Paweł", "Adam", "Andrzej", "Marcin"];
-        const LAST_NAMES = ["Kowalski", "Nowak", "Wójcik", "Kamiński", "Lewandowski", "Zieliński", "Szymański", "Dąbrowski", "Kozłowski", "Mazur"];
+        const LAST_NAMES = ["Kowalski", "Nowak", "Wójcik", "Kamiński", "Lewandowski", "Zieliński", "Szymański", "Dąbrowski", "Kozłowski"];
 
         let state = {};
 
-        // --- FUNKCJE POMOCNICZE ---
-        const formatMoney = (val) => new Intl.NumberFormat('pl-PL', {style: 'currency', currency: 'PLN', maximumFractionDigits: 0}).format(val);
-        
+        // Formatowanie Waluty
+        const formatMoney = (val) => new Intl.NumberFormat('pl-PL', {style: 'currency', currency: 'PLN'}).format(val);
+
+        // Obliczanie dystansu miedzy miastami
         function getDistance(c1, c2) {
             if(c1 === c2) return 0;
-            let p1 = CITIES[c1], p2 = CITIES[c2];
-            // Przelicznik stopni na przybliżone kilometry w Europie (~85km na stopień)
-            let dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2)) * 85; 
-            return Math.max(150, Math.floor(dist)); // Minimum 150km, żeby nie było tras po 10km
+            let dx = CITIES[c1].x - CITIES[c2].x;
+            let dy = CITIES[c1].y - CITIES[c2].y;
+            // Bardzo zgrubne przeliczenie współrzędnych geograficznych na kilometry drogowe (współczynnik ok 85-95)
+            return Math.max(80, Math.floor(Math.sqrt(dx*dx + dy*dy) * 95));
         }
 
         function saveGame() {
@@ -157,27 +175,27 @@
             const saved = localStorage.getItem(SAVE_KEY);
             if (saved) {
                 state = JSON.parse(saved);
-                if (!state.logs) state.logs = [];
-                // Kompatybilność wsteczna dla starych save'ów bez lokalizacji
-                state.trucks.forEach(t => { if(!t.location) t.location = "Warszawa"; });
                 return true;
             }
             return false;
         }
 
-        window.onload = () => { if (localStorage.getItem(SAVE_KEY)) document.getElementById('btn-continue').disabled = false; };
+        window.onload = () => {
+            if (localStorage.getItem(SAVE_KEY)) {
+                document.getElementById('btn-continue').disabled = false;
+            }
+        };
 
-        // --- LOGIKA BIZNESOWA ---
         function generateRandomJob() {
             let origin = CITY_NAMES[Math.floor(Math.random() * CITY_NAMES.length)];
             let dest = CITY_NAMES[Math.floor(Math.random() * CITY_NAMES.length)];
             while(origin === dest) dest = CITY_NAMES[Math.floor(Math.random() * CITY_NAMES.length)];
             
-            let dist = getDistance(origin, dest);
+            let dist = getDistance(origin, dest) + Math.floor(Math.random() * 200); // dodatek losowy na "objazdy"
             let cargo = CARGO[Math.floor(Math.random() * CARGO.length)];
             
-            // Lepsze zarobki: od 6.0 do 8.5 PLN za kilometr ładowny
-            let pay = dist * (Math.random() * 2.5 + 6.0); 
+            // Stawka podniesiona do 6.0 - 8.5 PLN za km
+            let pay = dist * (Math.random() * 2.5 + 6.0);
             
             return {
                 id: 'job_' + Date.now() + Math.floor(Math.random() * 1000),
@@ -190,25 +208,32 @@
             let name = document.getElementById('company-name').value || "Trans-Pol";
             localStorage.removeItem(SAVE_KEY);
             state = {
-                company: name, money: 300000, day: 1,
+                company: name,
+                money: 400000, // Zwiększony budżet początkowy
+                day: 1,
                 trucks: [], trailers: [], drivers: [], activeJobs: [],
-                marketJobs: Array.from({length: 12}, generateRandomJob), // Więcej ładunków (12)
-                logs: ["Zarząd wita w nowej firmie. Centrala znajduje się w Warszawie. Zakup sprzęt i rozpocznij zlecenia!"]
+                marketJobs: Array.from({length: 15}, generateRandomJob),
+                logs: ["Firma założona w Warszawie. Kapitał początkowy: 400 000 PLN. Kup lub wynajmij pierwszą ciężarówkę!"]
             };
-            saveGame(); startGame();
+            saveGame();
+            startGame();
         }
 
-        function continueGame() { if (loadGame()) startGame(); }
+        function continueGame() {
+            if (loadGame()) startGame();
+        }
 
         function startGame() {
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
-            renderAll(); showTab('dashboard');
+            renderAll();
+            showTab('dashboard');
         }
 
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
             document.getElementById('tab-' + tabId).style.display = 'block';
+            
             document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
             document.getElementById('nav-' + tabId).classList.add('active');
             renderAll();
@@ -220,116 +245,136 @@
             document.getElementById('top-money').innerText = formatMoney(state.money);
         }
 
-        // --- UPŁYW CZASU I SYMULACJA ---
+        // --- GŁÓWNA LOGIKA DNI ---
         function nextDay() {
             state.day++;
-            let dailyLogs = [`<strong>--- ZAKOŃCZONO DZIEŃ ${state.day-1} ---</strong>`];
-            let dailyRentalCost = 0;
+            let dailyLogs = [`<strong>--- Symulacja: Dzień ${state.day} ---</strong>`];
+            let dailyRent = 0;
 
-            // Opłaty za wynajem
-            state.trucks.forEach(t => { if(t.isRented) dailyRentalCost += t.rentCost; });
-            state.trailers.forEach(t => { if(t.isRented) dailyRentalCost += t.rentCost; });
-            
-            if(dailyRentalCost > 0) {
-                state.money -= dailyRentalCost;
-                dailyLogs.push(`💸 Potrącono koszty rat wynajmu floty: -${formatMoney(dailyRentalCost)}`);
+            // Koszty wynajmu
+            state.trucks.forEach(t => { if(t.isRented) dailyRent += t.rentDaily; });
+            state.trailers.forEach(t => { if(t.isRented) dailyRent += t.rentDaily; });
+            if(dailyRent > 0) {
+                state.money -= dailyRent;
+                dailyLogs.push(`💸 Pobrano koszty wynajmu floty: -${formatMoney(dailyRent)}`);
             }
 
+            // Przejazdy
             state.activeJobs.forEach(job => {
                 if (job.finished) return;
                 
                 let truck = state.trucks.find(t => t.id === job.truckId);
                 let driver = state.drivers.find(d => d.id === job.driverId);
                 
-                let drivenToday = Math.min(750, job.totalDistance - job.progress); // Max 750km na dzień
+                let totalJobDistance = job.emptyDistance + job.distance;
+                let drivenToday = Math.min(750, totalJobDistance - job.progress); // 750km to max dzienny dystans
                 
-                // MĄDRE ZUŻYCIE I AWARIE
-                // Zużycie mniejsze (0.6 zamiast 1.5)
-                truck.condition = Math.max(0, truck.condition - (drivenToday / 1000) * 0.6); 
-                
+                // System awarii - nowa mechanika
                 let breakdownChance = 0;
-                if (truck.condition < 30) breakdownChance = (30 - truck.condition) * 0.015; // Duża szansa poniżej 30% (nawet do 45%!)
-                else if (truck.condition < 70) breakdownChance = (70 - truck.condition) * 0.001; // Malutka szansa (do 4%)
-                // Powyżej 70% awarie nie występują
-                
+                if (truck.condition > 30) {
+                    breakdownChance = (100 - truck.condition) * 0.0002; // Bardzo mała szansa na zadbanej
+                } else {
+                    breakdownChance = ((30 - truck.condition) * 0.02) + 0.05; // Gwałtowny wzrost szans przy zaniedbaniu (do >60%)
+                }
+
                 if (Math.random() < breakdownChance) {
-                    let repairCost = Math.floor(Math.random() * 4000) + 2000; // Poważne naprawy w trasie są drogie
+                    let repairCost = Math.floor(Math.random() * 4000) + 2000;
                     state.money -= repairCost;
-                    dailyLogs.push(`⚠️ <span style="color:var(--danger)">Awaria na trasie!</span> Zepsuta część w ${truck.name} (Stan: ${truck.condition.toFixed(0)}%). Koszt holowania i serwisu: ${formatMoney(repairCost)}`);
-                    drivenToday = 0; // Traci cały dzień pracy
+                    dailyLogs.push(`⚠️ <span style="color:var(--danger)">Ciężarówka ${truck.name} w stanie ${truck.condition.toFixed(0)}% uległa awarii!</span> Przymusowy serwis na trasie: -${formatMoney(repairCost)}`);
+                    drivenToday = 0; // Traci cały dzień na naprawę
                 }
 
                 job.progress += drivenToday;
                 truck.mileage += drivenToday;
                 
-                if (job.progress >= job.totalDistance) {
+                // Zużycie 3x wolniejsze (0.5 punktu procentowego na 1000km)
+                truck.condition = Math.max(0, truck.condition - (drivenToday / 1000) * 0.5); 
+                
+                // Sprawdzenie zakończenia zlecenia
+                if (job.progress >= totalJobDistance) {
                     job.finished = true;
                     
-                    // KOSZTY
-                    let fuelMultiplier = 1;
-                    if (job.weight > 10) fuelMultiplier += (job.weight - 10) * 0.02; // Ciężki ładunek = spalanie
+                    let emptyKm = job.emptyDistance;
+                    let cargoKm = job.distance;
                     
-                    // Puste km spalają bazowo, pełne spalają z obciążeniem
-                    let emptyFuel = (job.emptyKm / 100) * truck.fuelPer100 * 6.40;
-                    let loadedFuel = (job.distance / 100) * truck.fuelPer100 * fuelMultiplier * 6.40;
+                    let fuelMultiplier = 1 + (job.weight > 10 ? (job.weight - 10) * 0.02 : 0);
                     
-                    let tollCost = job.distance * 0.80; // Opłaty tylko za trasę z ładunkiem
-                    let driverCost = job.totalDistance * driver.salary; // Płacimy też za puste dojazdy
+                    let fuelUsedEmpty = (emptyKm / 100) * truck.fuelPer100;
+                    let fuelUsedCargo = (cargoKm / 100) * truck.fuelPer100 * fuelMultiplier;
                     
-                    let totalCost = emptyFuel + loadedFuel + tollCost + driverCost;
+                    let fuelCost = (fuelUsedEmpty + fuelUsedCargo) * 6.40;
+                    let tollCost = cargoKm * 0.80; // Opłaty drogowe tylko dla pełnego
+                    let driverCost = (emptyKm + cargoKm) * driver.salary; 
+                    
+                    let totalCost = fuelCost + tollCost + driverCost;
                     let profit = job.pay - totalCost;
                     
                     state.money += profit;
                     
-                    // Aktualizacja lokalizacji po ukończeniu
-                    truck.location = job.destination;
-                    truck.status = 'Dostępna';
-                    state.trailers.find(t => t.id === job.trailerId).status = 'Dostępna';
-                    driver.status = 'Dostępny';
+                    // Aktualizacja lokalizacji floty i statusu
+                    let trailer = state.trailers.find(t => t.id === job.trailerId);
                     
-                    let emptyMsg = job.emptyKm > 0 ? ` (w tym ${job.emptyKm} km pustego dojazdu z ${job.originalTruckLoc})` : '';
+                    truck.status = 'Dostępna'; truck.location = job.destination;
+                    trailer.status = 'Dostępna'; trailer.location = job.destination;
+                    driver.status = 'Dostępny'; driver.location = job.destination;
                     
-                    dailyLogs.push(`✅ <strong>Wykonano transport:</strong> ${job.origin} ➔ ${job.destination}. <br>
-                    <span style="color:#aaa; font-size:0.85rem">Przychód: ${formatMoney(job.pay)} | Koszty paliwa, bramek i kierowcy: ${formatMoney(totalCost)}${emptyMsg}</span> <br>
-                    💰 <strong>Zysk netto: ${formatMoney(profit)}</strong>`);
+                    dailyLogs.push(`✅ <strong>Dostarczono:</strong> ${job.origin} ➔ ${job.destination}. <br>
+                    <span style="color:#aaa; font-size:0.85rem">Przychód: ${formatMoney(job.pay)} | Koszty operacyjne (Dojazd pusty: ${emptyKm}km, Trasa: ${cargoKm}km): -${formatMoney(totalCost)}</span> <br>
+                    💰 <strong>Zysk netto z trasy: ${formatMoney(profit)}</strong>`);
                 }
             });
 
             state.activeJobs = state.activeJobs.filter(j => !j.finished);
 
-            // Odświeżanie giełdy (usuń kilka starych, dodaj nowe by utrzymać 12-16)
-            for(let i=0; i<3; i++) {
-                if (state.marketJobs.length > 0) state.marketJobs.shift();
+            // Odświeżanie giełdy
+            if (state.marketJobs.length > 20) state.marketJobs = state.marketJobs.slice(5); // Usuń najstarsze
+            let newJobsCount = Math.floor(Math.random() * 3) + 3; // Dodaje 3 do 5 nowych dziennie
+            for(let i=0; i<newJobsCount; i++) {
                 state.marketJobs.push(generateRandomJob());
             }
-            if(state.marketJobs.length < 12) {
-                while(state.marketJobs.length < 12) state.marketJobs.push(generateRandomJob());
-            }
 
-            state.logs = dailyLogs.concat(state.logs).slice(0, 60); // Pamiętaj więcej logów
-            saveGame(); renderAll();
+            state.logs = dailyLogs.concat(state.logs).slice(0, 60);
+            
+            saveGame();
+            renderAll();
         }
 
-        // --- RENDEROWANIE ZAKŁADEK ---
+        // --- RENDEROWANIE UI ---
+        function renderAll() {
+            updateTopbar();
+            if(document.getElementById('tab-dashboard').style.display !== 'none') renderDashboard();
+            if(document.getElementById('tab-market').style.display !== 'none') renderMarket();
+            if(document.getElementById('tab-fleet').style.display !== 'none') renderFleet();
+            if(document.getElementById('tab-shop').style.display !== 'none') renderShop();
+        }
+
         function renderDashboard() {
-            let activeHtml = state.activeJobs.length === 0 ? '<p style="color:#777;">Wszystkie Twoje pojazdy oczekują na dyspozycje na bazie.</p>' : '';
+            let activeHtml = state.activeJobs.length === 0 ? '<p style="color:#777;">Wszystkie Twoje pojazdy są wolne. Udaj się na Giełdę.</p>' : '';
             
             state.activeJobs.forEach(job => {
-                let percent = (job.progress / job.totalDistance) * 100;
+                let isDrivingEmpty = job.progress < job.emptyDistance;
+                let currentStatus = isDrivingEmpty ? `<span style="color:var(--accent)">Dojazd na załadunek (puste kilometry)</span>` : `<span style="color:var(--success)">W drodze z ładunkiem do celu</span>`;
+                
+                let emptyPercent = (job.emptyDistance / (job.emptyDistance + job.distance)) * 100;
+                let progressPercent = (job.progress / (job.emptyDistance + job.distance)) * 100;
+
                 let driver = state.drivers.find(d => d.id === job.driverId);
-                let modeText = job.progress < job.emptyKm ? `<span style="color:var(--accent)">Dojazd na załadunek w ${job.origin}</span>` : `<span style="color:var(--success)">W drodze do ${job.destination}</span>`;
                 
                 activeHtml += `
                     <div class="card" style="border-left-color: var(--info);">
                         <h4>${job.origin} ➔ ${job.destination}</h4>
-                        <p style="margin: 5px 0; font-size: 0.9rem;">Status: ${modeText}</p>
-                        <p style="margin: 5px 0; font-size: 0.9rem;">Kierowca: ${driver.name} | Dystans całości: ${job.totalDistance} km</p>
-                        <p style="margin: 0; text-align: right; font-size: 0.85rem;">Pokonano: ${job.progress.toFixed(0)} km</p>
-                        <div class="progress-bg"><div class="progress-fill" style="width: ${percent}%"></div></div>
+                        <p style="margin: 5px 0; font-size: 0.9rem;">Kierowca: ${driver.name} | Status: ${currentStatus}</p>
+                        <p style="margin: 0; text-align: right; font-size: 0.85rem;">Postęp: ${job.progress.toFixed(0)} / ${job.emptyDistance + job.distance} km</p>
+                        <div class="progress-bg">
+                            <div class="progress-empty" style="width: ${emptyPercent}%"></div>
+                            <div class="progress-cargo" style="width: ${progressPercent}%; left:0;"></div>
+                        </div>
                     </div>`;
             });
             document.getElementById('dashboard-active').innerHTML = activeHtml;
-            document.getElementById('dashboard-logs').innerHTML = state.logs.map(l => `<div class="log-entry">${l}</div>`).join('');
+
+            let logsHtml = state.logs.map(l => `<div class="log-entry">${l}</div>`).join('');
+            document.getElementById('dashboard-logs').innerHTML = logsHtml;
         }
 
         function toggleAssign(index) {
@@ -341,30 +386,26 @@
             let html = state.marketJobs.map((job, index) => `
                 <div class="card">
                     <h3 style="margin-bottom: 5px; color: var(--accent);">${job.origin} ➔ ${job.destination}</h3>
-                    <p style="margin: 5px 0;">Płatne kilometry z ładunkiem: <strong>${job.distance} km</strong></p>
-                    <p style="margin: 5px 0;">Ładunek: ${job.cargoName} (${job.weight}t)</p>
+                    <p style="margin: 5px 0;">Dystans załadunku: <strong>${job.distance} km</strong></p>
+                    <p style="margin: 5px 0;">Towar: ${job.cargoName} (${job.weight}t)</p>
                     <hr>
-                    <p style="font-size: 1.2rem; font-weight:bold; margin: 10px 0;">Fracht: ${formatMoney(job.pay)}</p>
-                    <button class="btn" style="width:100%" onclick="toggleAssign(${index})">Rozdziel Dyspozycje</button>
+                    <p style="font-size: 1.2rem; font-weight:bold; margin: 10px 0;">Przychód: ${formatMoney(job.pay)}</p>
+                    <button class="btn" style="width:100%" onclick="toggleAssign(${index})">Rozważ Zlecenie</button>
                     
                     <div id="assign-${index}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px dashed #555;">
                         <select id="sel-truck-${index}">
-                            <option value="">-- Wybierz Ciężarówkę (Sprawdź Dojazd) --</option>
-                            ${state.trucks.filter(t => t.status === 'Dostępna').map(t => {
-                                let emptyDist = getDistance(t.location, job.origin);
-                                let distWarning = emptyDist > 0 ? ` (+${emptyDist}km pusty dojazd)` : ` (Jest na miejscu!)`;
-                                return `<option value="${t.id}">${t.name} w ${t.location}${distWarning}</option>`;
-                            }).join('')}
+                            <option value="">-- Wybierz Ciężarówkę --</option>
+                            ${state.trucks.filter(t => t.status === 'Dostępna').map(t => `<option value="${t.id}">${t.name} (Stan: ${t.condition.toFixed(0)}\%, Lok:${t.location})</option>`).join('')}
                         </select>
                         <select id="sel-trailer-${index}">
                             <option value="">-- Wybierz Naczepę --</option>
-                            ${state.trailers.filter(t => t.status === 'Dostępna').map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                            ${state.trailers.filter(t => t.status === 'Dostępna').map(t => `<option value="${t.id}">${t.name} (Lok:${t.location})</option>`).join('')}
                         </select>
                         <select id="sel-driver-${index}">
                             <option value="">-- Wybierz Kierowcę --</option>
-                            ${state.drivers.filter(d => d.status === 'Dostępny').map(d => `<option value="${d.id}">${d.name} (${formatMoney(d.salary)}/km)</option>`).join('')}
+                            ${state.drivers.filter(d => d.status === 'Dostępny').map(d => `<option value="${d.id}">${d.name} (${formatMoney(d.salary)}/km, Lok:${d.location})</option>`).join('')}
                         </select>
-                        <button class="btn btn-success" style="width:100%" onclick="startJob(${index})">Podpisz i Wyślij</button>
+                        <button class="btn btn-success" style="width:100%" onclick="startJob(${index})">Podpisz umowę i rozpocznij</button>
                     </div>
                 </div>
             `).join('');
@@ -376,76 +417,86 @@
             let trailerId = document.getElementById(`sel-trailer-${index}`).value;
             let driverId = document.getElementById(`sel-driver-${index}`).value;
 
-            if (!truckId || !trailerId || !driverId) { alert("Wymagany ciągnik, naczepa i kierowca."); return; }
+            if (!truckId || !trailerId || !driverId) {
+                alert("Musisz poprawnie przypisać Ciężarówkę, Naczepę oraz Kierowcę.");
+                return;
+            }
 
             let job = state.marketJobs[index];
             let truck = state.trucks.find(t => t.id === truckId);
+            let trailer = state.trailers.find(t => t.id === trailerId);
+            let driver = state.drivers.find(d => d.id === driverId);
             
-            // Oblicz puste kilometry z obecnej lokalizacji do punktu załadunku
-            let emptyKm = getDistance(truck.location, job.origin);
-            
+            // Obliczanie "pustych kilometrów" żeby dojechać na start zlecenia (najdalszy element determinuje dystans dojazdu zestawu)
+            let e1 = getDistance(truck.location, job.origin);
+            let e2 = getDistance(trailer.location, job.origin);
+            let e3 = getDistance(driver.location, job.origin);
+            let emptyDist = Math.max(e1, e2, e3);
+
             truck.status = 'W trasie';
-            state.trailers.find(t => t.id === trailerId).status = 'W trasie';
-            state.drivers.find(d => d.id === driverId).status = 'W trasie';
+            trailer.status = 'W trasie';
+            driver.status = 'W trasie';
 
             state.activeJobs.push({
                 ...job,
                 truckId, trailerId, driverId,
+                emptyDistance: emptyDist,
                 progress: 0,
-                emptyKm: emptyKm,
-                totalDistance: job.distance + emptyKm,
-                originalTruckLoc: truck.location,
                 finished: false
             });
 
             state.marketJobs.splice(index, 1);
             
-            if(emptyKm > 0) {
-                state.logs.unshift(`Ciężarówka wykonuje "pusty przerzut" z ${truck.location} do ${job.origin} (${emptyKm} km) w celu podjęcia zlecenia.`);
-            } else {
-                state.logs.unshift(`Kierowca ładuje towar w ${job.origin} i rusza do ${job.destination}.`);
-            }
+            let logMsg = `Zespół wyruszył. Cel transportu: ${job.origin} ➔ ${job.destination}.`;
+            if (emptyDist > 0) logMsg += ` Zespół musi jednak najpierw dojechać ${emptyDist}km na pusto do punktu załadunku.`;
             
-            saveGame(); showTab('dashboard');
+            state.logs.unshift(logMsg);
+            saveGame();
+            showTab('dashboard');
         }
 
         function renderFleet() {
-            let html = `<h2>Ciągniki Siodłowe</h2><div class="grid">`;
-            if (state.trucks.length === 0) html += `<p style="grid-column: 1/-1;">Brak pojazdów.</p>`;
+            let html = `<h2>Posiadane i Wynajmowane Ciężarówki</h2><div class="grid">`;
+            if (state.trucks.length === 0) html += `<p style="grid-column: 1/-1;">Brak ciężarówek.</p>`;
             
             state.trucks.forEach(t => {
+                let isRentedBadge = t.isRented ? `<span class="badge" style="background:var(--rent)">Wynajem</span>` : '';
                 let condColor = t.condition < 40 ? 'var(--danger)' : 'var(--success)';
                 let repairCost = (100 - t.condition) * 200; 
-                let badge = t.isRented ? `<span class="badge">WYNAJEM (-${t.rentCost} PLN/dz)</span>` : '';
                 
-                html += `<div class="card">
-                    ${badge}
-                    <h3>${t.name}</h3>
-                    <p>Obecna lokacja: <strong style="color:var(--info)">${t.location}</strong></p>
-                    <p>Status: <strong>${t.status}</strong></p>
-                    <p>Stan: <strong style="color: ${condColor}">${t.condition.toFixed(1)}%</strong> | Przebieg: ${t.mileage.toFixed(0)} km</p>
+                html += `<div class="card ${t.isRented ? 'rented' : ''}">
+                    <h3>${t.name} ${isRentedBadge}</h3>
+                    <p>Status: <strong style="color: ${t.status==='Dostępna'?'var(--success)':'var(--accent)'}">${t.status}</strong></p>
+                    <p>Lokalizacja (Garaż): <strong>${t.location}</strong></p>
+                    <p>Przebieg firmowy: ${t.mileage.toFixed(0)} km</p>
+                    <p>Stan techniczny: <strong style="color: ${condColor}">${t.condition.toFixed(1)}%</strong></p>
                     
-                    ${t.status === 'Dostępna' && t.condition < 99 ? `<button class="btn btn-info" style="margin-top:5px; width:100%" onclick="repairTruck('${t.id}', ${repairCost})">Napraw (${formatMoney(repairCost)})</button>` : ''}
-                    
-                    ${t.isRented && t.status === 'Dostępna' ? `<button class="btn btn-danger" style="margin-top:5px; width:100%" onclick="returnRental('truck', '${t.id}')">Zwróć Leasing</button>` : ''}
+                    ${t.status === 'Dostępna' && t.condition < 95 ? `<button class="btn btn-info" onclick="repairTruck('${t.id}',${repairCost})">Zrób Serwis (${formatMoney(repairCost)})</button>` : ''}
+                    ${t.isRented && t.status === 'Dostępna' ? `<button class="btn btn-danger" onclick="returnRentTruck('${t.id}')">Zakończ Wynajem</button>` : ''}
                 </div>`;
             });
 
-            html += `</div><hr><h2>Naczepy</h2><div class="grid">`;
+            html += `</div><hr><h2>Flota Naczep</h2><div class="grid">`;
             if (state.trailers.length === 0) html += `<p style="grid-column: 1/-1;">Brak naczep.</p>`;
             
             state.trailers.forEach(t => {
-                let badge = t.isRented ? `<span class="badge">WYNAJEM</span>` : '';
-                html += `<div class="card">
-                    ${badge}
-                    <h3>${t.name}</h3><p>Status: <strong>${t.status}</strong></p>
-                    ${t.isRented && t.status === 'Dostępna' ? `<button class="btn btn-danger" style="margin-top:5px; width:100%" onclick="returnRental('trailer', '${t.id}')">Zwróć do Wypożyczalni</button>` : ''}
+                let isRentedBadge = t.isRented ? `<span class="badge" style="background:var(--rent)">Wynajem</span>` : '';
+                html += `<div class="card ${t.isRented ? 'rented' : ''}">
+                    <h3>${t.name} ${isRentedBadge}</h3>
+                    <p>Status: <strong>${t.status}</strong></p>
+                    <p>Lokalizacja: <strong>${t.location}</strong></p>
+                    ${t.isRented && t.status === 'Dostępna' ? `<button class="btn btn-danger" onclick="returnRentTrailer('${t.id}')">Zakończ Wynajem</button>` : ''}
                 </div>`;
             });
 
-            html += `</div><hr><h2>Kierowcy</h2><div class="grid">`;
+            html += `</div><hr><h2>Kadry - Kierowcy</h2><div class="grid">`;
+            if (state.drivers.length === 0) html += `<p style="grid-column: 1/-1;">Brak pracowników.</p>`;
             state.drivers.forEach(d => {
-                html += `<div class="card"><h3>${d.name}</h3><p>Status: <strong>${d.status}</strong></p><p>Wynagrodzenie: ${formatMoney(d.salary)}/km</p></div>`;
+                html += `<div class="card">
+                    <h3>${d.name}</h3>
+                    <p>Status: <strong>${d.status}</strong> (Lok: ${d.location})</p>
+                    <p>Stawka (za km): ${formatMoney(d.salary)}</p>
+                </div>`;
             });
 
             html += `</div>`;
@@ -455,56 +506,63 @@
         function repairTruck(id, cost) {
             if (state.money >= cost) {
                 state.money -= cost;
-                state.trucks.find(x => x.id === id).condition = 100;
+                let t = state.trucks.find(x => x.id === id);
+                t.condition = 100;
                 saveGame(); renderAll();
-            } else alert("Brak środków!");
+            } else {
+                alert("Brak środków na wykonanie serwisu!");
+            }
+        }
+        
+        function returnRentTruck(id) {
+            if(confirm("Czy na pewno chcesz zwrócić wynajmowaną ciężarówkę do dealera?")) {
+                state.trucks = state.trucks.filter(x => x.id !== id);
+                state.logs.unshift(`Zwrócono wynajmowaną ciężarówkę.`);
+                saveGame(); renderAll();
+            }
         }
 
-        function returnRental(type, id) {
-            if(!confirm("Na pewno chcesz zwrócić ten wynajęty sprzęt? Nie odzyskasz poniesionych kosztów.")) return;
-            if (type === 'truck') state.trucks = state.trucks.filter(t => t.id !== id);
-            if (type === 'trailer') state.trailers = state.trailers.filter(t => t.id !== id);
-            state.logs.unshift("Rozwiązano umowę wynajmu sprzętu.");
-            saveGame(); renderAll();
+        function returnRentTrailer(id) {
+            if(confirm("Czy na pewno chcesz zwrócić naczepę?")) {
+                state.trailers = state.trailers.filter(x => x.id !== id);
+                state.logs.unshift(`Zwrócono wynajmowaną naczepę.`);
+                saveGame(); renderAll();
+            }
         }
 
+        // --- SKLEP I WYNAJEM ---
         function renderShop() {
-            let html = `<h2>Salon Ciężarówek (Kupno na własność)</h2><div class="grid">`;
+            let html = `<h2>Dealer Ciężarówek</h2><div class="grid">`;
             TRUCKS_SHOP.forEach(t => {
                 html += `<div class="card">
-                    <h3>${t.name}</h3><p>Spalanie: <strong>${t.fuelPer100} l/100km</strong></p>
-                    <button class="btn btn-success" style="width:100%" onclick="buyTruck('${t.id}')">Kup: ${formatMoney(t.price)}</button>
+                    <h3>${t.name}</h3>
+                    <p>Spalanie bazowe: <strong>${t.fuelPer100} l/100km</strong></p>
+                    <p>Kupno: ${formatMoney(t.price)}</p>
+                    <p>Wynajem (opłata startowa): ${formatMoney(t.rentInit)}</p>
+                    <p>Wynajem (koszt dzienny): ${formatMoney(t.rentDaily)}</p>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-success" style="flex:1;" onclick="buyTruck('${t.id}')">KUP</button>
+                        <button class="btn btn-rent" style="flex:1;" onclick="rentTruck('${t.id}')">WYNAJMIJ</button>
+                    </div>
                 </div>`;
             });
 
-            html += `</div><hr><h2>Wypożyczalnia Sprzętu (Leasing Krótkoterminowy)</h2>
-            <p style="color:#aaa">Płacisz tylko opłatę administracyjną 2500 PLN, a sprzęt od razu trafia do Twojej bazy w Warszawie. Opłata dzienna pobierana jest o północy.</p>
-            <div class="grid">`;
-            
-            TRUCKS_SHOP.forEach(t => {
-                html += `<div class="card" style="border-left-color: var(--rental)">
-                    <h3>${t.name} (Wynajem)</h3>
-                    <p>Koszt dzienny: <strong style="color:var(--rental)">${formatMoney(t.rentCost)} / dzień</strong></p>
-                    <button class="btn btn-rental" style="width:100%" onclick="rentTruck('${t.id}')">Wynajmij (Opłata start: 2 500 zł)</button>
-                </div>`;
-            });
+            html += `</div><hr><h2>Sprzedaż i Wynajem Naczep</h2><div class="grid">`;
             TRAILERS_SHOP.forEach(t => {
-                html += `<div class="card" style="border-left-color: var(--rental)">
-                    <h3>${t.name} (Wynajem)</h3>
-                    <p>Koszt dzienny: <strong style="color:var(--rental)">${formatMoney(t.rentCost)} / dzień</strong></p>
-                    <button class="btn btn-rental" style="width:100%" onclick="rentTrailer('${t.id}')">Wynajmij (Opłata start: 1 000 zł)</button>
+                html += `<div class="card">
+                    <h3>${t.name}</h3>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-success" style="flex:1;" onclick="buyTrailer('${t.id}')">KUP (${formatMoney(t.price)})</button>
+                        <button class="btn btn-rent" style="flex:1;" onclick="rentTrailer('${t.id}')">WYNAJMIJ (${formatMoney(t.rentInit)})</button>
+                    </div>
                 </div>`;
             });
 
-            html += `</div><hr><h2>Punkt Sprzedaży Naczep</h2><div class="grid">`;
-            TRAILERS_SHOP.forEach(t => {
-                html += `<div class="card"><h3>${t.name}</h3><button class="btn btn-success" style="width:100%" onclick="buyTrailer('${t.id}')">Kup: ${formatMoney(t.price)}</button></div>`;
-            });
-
-            html += `</div><hr><h2>Agencja Pracy</h2><div class="grid">
+            html += `</div><hr><h2>Agencja Pracy (HR)</h2><div class="grid">
                 <div class="card">
-                    <h3>Zatrudnij Kierowcę</h3>
-                    <button class="btn btn-success" style="width:100%" onclick="hireDriver()">Podpisz kontrakt (Prowizja HR: 2 500 PLN)</button>
+                    <h3>Wolni Strzelcy (Kierowcy)</h3>
+                    <p>Agencja wyśle Ci losowego kierowcę. Kierowcy rozpoczynają pracę w Warszawie.</p>
+                    <button class="btn btn-info" style="width:100%" onclick="hireDriver()">Podpisz kontrakt HR (-3 500 PLN)</button>
                 </div>
             </div>`;
             
@@ -516,47 +574,53 @@
             if (state.money >= item.price) {
                 state.money -= item.price;
                 state.trucks.push({ id: 'trk_' + Date.now(), name: item.name, fuelPer100: item.fuelPer100, condition: 100, mileage: 0, status: 'Dostępna', location: 'Warszawa', isRented: false });
-                state.logs.unshift(`Zakupiono ciężarówkę ${item.name}. Dostarczono do bazy: Warszawa.`);
+                state.logs.unshift(`Zakupiono na własność ciężarówkę: ${item.name}. Pojazd zaparkowano w Warszawie.`);
                 saveGame(); renderAll();
-            } else alert("Brak środków!");
+            } else { alert("Nie masz wystarczających środków!"); }
         }
 
         function rentTruck(id) {
             let item = TRUCKS_SHOP.find(x => x.id === id);
-            if (state.money >= 2500) {
-                state.money -= 2500;
-                state.trucks.push({ id: 'trk_' + Date.now(), name: item.name, fuelPer100: item.fuelPer100, condition: 100, mileage: 0, status: 'Dostępna', location: 'Warszawa', isRented: true, rentCost: item.rentCost });
-                state.logs.unshift(`Wynajęto ciągnik ${item.name}. Opłata dzienna to ${formatMoney(item.rentCost)}.`);
+            if (state.money >= item.rentInit) {
+                state.money -= item.rentInit;
+                state.trucks.push({ id: 'trk_' + Date.now(), name: item.name, fuelPer100: item.fuelPer100, condition: 100, mileage: 0, status: 'Dostępna', location: 'Warszawa', isRented: true, rentDaily: item.rentDaily });
+                state.logs.unshift(`Wynajęto ciężarówkę: ${item.name}. Dzienne koszty leasingowe: ${formatMoney(item.rentDaily)}.`);
                 saveGame(); renderAll();
-            } else alert("Brak środków na opłatę początkową (2500 PLN)!");
+            } else { alert("Brak środków na opłatę startową!"); }
         }
 
         function buyTrailer(id) {
             let item = TRAILERS_SHOP.find(x => x.id === id);
             if (state.money >= item.price) {
                 state.money -= item.price;
-                state.trailers.push({ id: 'trl_' + Date.now(), name: item.name, status: 'Dostępna', isRented: false });
+                state.trailers.push({ id: 'trl_' + Date.now(), name: item.name, status: 'Dostępna', location: 'Warszawa', isRented: false });
+                state.logs.unshift(`Rozszerzono flotę o nową naczepę: ${item.name}.`);
                 saveGame(); renderAll();
-            } else alert("Brak środków!");
+            } else { alert("Brak środków!"); }
         }
 
         function rentTrailer(id) {
             let item = TRAILERS_SHOP.find(x => x.id === id);
-            if (state.money >= 1000) {
-                state.money -= 1000;
-                state.trailers.push({ id: 'trl_' + Date.now(), name: item.name, status: 'Dostępna', isRented: true, rentCost: item.rentCost });
+            if (state.money >= item.rentInit) {
+                state.money -= item.rentInit;
+                state.trailers.push({ id: 'trl_' + Date.now(), name: item.name, status: 'Dostępna', location: 'Warszawa', isRented: true, rentDaily: item.rentDaily });
+                state.logs.unshift(`Wynajęto naczepę: ${item.name}.`);
                 saveGame(); renderAll();
-            } else alert("Brak środków na opłatę początkową (1000 PLN)!");
+            } else { alert("Brak środków na opłatę startową!"); }
         }
 
         function hireDriver() {
-            if (state.money >= 2500) {
-                state.money -= 2500;
+            let cost = 3500;
+            if (state.money >= cost) {
+                state.money -= cost;
                 let fname = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
                 let lname = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-                state.drivers.push({ id: 'drv_' + Date.now(), name: `${fname} ${lname}`, status: 'Dostępny', salary: (Math.random() * 0.1) + 0.45 });
+                let salary = (Math.random() * 0.1) + 0.48; 
+                
+                state.drivers.push({ id: 'drv_' + Date.now(), name: `${fname} ${lname}`, status: 'Dostępny', salary: salary, location: 'Warszawa' });
+                state.logs.unshift(`Zatrudniono nowego kierowcę do bazy w Warszawie: ${fname} ${lname}.`);
                 saveGame(); renderAll();
-            } else alert("Brak środków na opłatę dla agencji!");
+            } else { alert("Brak środków na pokrycie kosztów agencyjnych!"); }
         }
     </script>
 </body>
