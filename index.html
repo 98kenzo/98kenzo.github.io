@@ -485,7 +485,7 @@
                                 const truck = state.trucks.find(t => t.id === d.assignedTruckId);
                                 const trailer = state.trailers.find(tr => tr.id === d.assignedTrailerId);
                                 if (!truck || !trailer || truck.status !== 'Dostępna' || trailer.status !== 'Dostępna') return '';
-                                return `<option value="${d.id}|${truck.id}|${trailer.id}">${d.name} + ${truck.name} + ${trailer.name}</option>`;
+                                return `<option value="${d.id}|${truck.id}|${trailer.id}">${d.name} (kierowca: ${d.location}) + ${truck.name} (lok.: ${truck.location}) + ${trailer.name} (lok.: ${trailer.location})</option>`;
                             }).join('')}
                         </select>
                         <p style="color:#aaa;font-size:0.85rem;margin-top:0;">Zestaw jest wybierany z trwałych przypisań w zakładce „Baza i Flota”.</p>
