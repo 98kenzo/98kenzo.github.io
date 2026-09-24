@@ -44,8 +44,15 @@
         .progress-cargo { background: var(--success); height: 100%; position: absolute; top:0; z-index: 2; transition: width 0.3s;}
         .dashboard-panels { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 15px; margin-top: 20px; }
         .map-panel { min-height: 380px; }
-        .map { position: relative; height: 320px; overflow: hidden; border: 1px solid #444; border-radius: 6px; background: #17252b; background-image: linear-gradient(30deg, rgba(255,255,255,0.04) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,0.04) 87.5%, rgba(255,255,255,0.04)), linear-gradient(150deg, rgba(255,255,255,0.04) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,0.04) 87.5%, rgba(255,255,255,0.04)); background-size: 48px 84px; }
-        .map::after { content: ''; position: absolute; inset: 12% 7%; border: 1px solid rgba(255,255,255,0.12); border-radius: 45% 55% 48% 52%; transform: rotate(-8deg); pointer-events: none; }
+        .map { position: relative; height: 320px; overflow: hidden; border: 1px solid #444; border-radius: 6px; background: #17252b; }
+        .map-background { position: absolute; inset: 0; background: radial-gradient(ellipse at 45% 47%, rgba(111,153,137,0.25) 0 34%, transparent 35%), radial-gradient(ellipse at 55% 65%, rgba(111,153,137,0.2) 0 20%, transparent 21%), linear-gradient(160deg, #1a3038, #122027); }
+        .map-background::after { content: ''; position: absolute; inset: 10% 7%; border: 1px solid rgba(214,235,214,0.16); border-radius: 48% 52% 45% 55%; transform: rotate(-8deg); }
+        .map-land { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+        .map-land path { fill: rgba(89,132,112,0.28); stroke: rgba(188,220,195,0.22); stroke-width: 0.5; }
+        .map-routes { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+        .map-route-base { fill: none; stroke: rgba(182,211,197,0.2); stroke-width: 0.7; vector-effect: non-scaling-stroke; }
+        .map-route-active { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 2px rgba(255,152,0,0.6)); }
+        .map-markers { position: absolute; inset: 0; z-index: 3; }
         .map-city { position: absolute; transform: translate(-50%, -50%); z-index: 2; color: #b8c8cc; font-size: 0.7rem; white-space: nowrap; }
         .map-city::before { content: ''; display: block; width: 5px; height: 5px; margin: 0 auto 2px; border-radius: 50%; background: #91a7ad; }
         .driver-marker { position: absolute; transform: translate(-50%, -50%); z-index: 4; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: #111; border: 2px solid #fff; font-size: 0.7rem; font-weight: bold; box-shadow: 0 0 0 4px rgba(255,152,0,0.2); }
@@ -114,7 +121,14 @@
                 <div class="dashboard-panels">
                     <div class="card map-panel">
                         <h3>Mapa kierowców i aktywności</h3>
-                        <div id="driver-map" class="map"></div>
+                        <div id="driver-map" class="map">
+                            <div class="map-background"></div>
+                            <svg class="map-land" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                <path d="M12 38 L18 29 L27 27 L34 20 L43 22 L49 14 L58 18 L66 15 L73 23 L84 27 L91 38 L86 45 L91 53 L84 61 L79 72 L69 69 L62 82 L53 76 L46 85 L38 74 L30 72 L27 61 L19 57 L21 48 L13 44 Z"></path>
+                            </svg>
+                            <svg id="map-routes" class="map-routes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+                            <div id="map-markers" class="map-markers"></div>
+                        </div>
                         <div class="map-legend"><span><i class="legend-dot"></i>W trasie</span><span><i class="legend-dot available"></i>Dostępny</span></div>
                     </div>
                     <div class="card chart-wrap">
@@ -145,12 +159,20 @@
         
         // System koordynatów do obliczania dystansu
         const CITIES = {
-            "Warszawa": {x: 21.0, y: 52.2}, "Berlin": {x: 13.4, y: 52.5}, 
-            "Paryż": {x: 2.3, y: 48.8}, "Praga": {x: 14.4, y: 50.0}, 
-            "Wiedeń": {x: 16.3, y: 48.2}, "Madryt": {x: -3.7, y: 40.4},
-            "Rzym": {x: 12.5, y: 41.9}, "Amsterdam": {x: 4.9, y: 52.3}, 
-            "Bruksela": {x: 4.3, y: 50.8}, "Oslo": {x: 10.7, y: 59.9}, 
-            "Londyn": {x: -0.1, y: 51.5}, "Budapeszt": {x: 19.0, y: 47.4}
+            "Warszawa": { lon: 21.0122, lat: 52.2297 }, "Berlin": { lon: 13.4050, lat: 52.5200 },
+            "Paryż": { lon: 2.3522, lat: 48.8566 }, "Praga": { lon: 14.4378, lat: 50.0755 },
+            "Wiedeń": { lon: 16.3738, lat: 48.2082 }, "Madryt": { lon: -3.7038, lat: 40.4168 },
+            "Rzym": { lon: 12.4964, lat: 41.9028 }, "Amsterdam": { lon: 4.9041, lat: 52.3676 },
+            "Bruksela": { lon: 4.3517, lat: 50.8503 }, "Oslo": { lon: 10.7522, lat: 59.9139 },
+            "Londyn": { lon: -0.1276, lat: 51.5074 }, "Budapeszt": { lon: 19.0402, lat: 47.4979 }
+        };
+        const ROAD_GRAPH = {
+            "Warszawa": ["Berlin", "Praga", "Budapeszt"], "Berlin": ["Warszawa", "Praga", "Amsterdam", "Bruksela"],
+            "Paryż": ["Bruksela", "Londyn", "Madryt"], "Praga": ["Berlin", "Warszawa", "Wiedeń", "Budapeszt"],
+            "Wiedeń": ["Praga", "Budapeszt", "Rzym"], "Madryt": ["Paryż", "Rzym"],
+            "Rzym": ["Wiedeń", "Madryt"], "Amsterdam": ["Berlin", "Bruksela", "Oslo"],
+            "Bruksela": ["Amsterdam", "Berlin", "Paryż", "Londyn"], "Oslo": ["Amsterdam"],
+            "Londyn": ["Bruksela", "Paryż"], "Budapeszt": ["Warszawa", "Praga", "Wiedeń"]
         };
         const CITY_NAMES = Object.keys(CITIES);
 
@@ -186,10 +208,32 @@
         // Obliczanie dystansu miedzy miastami
         function getDistance(c1, c2) {
             if(c1 === c2) return 0;
-            let dx = CITIES[c1].x - CITIES[c2].x;
-            let dy = CITIES[c1].y - CITIES[c2].y;
-            // Bardzo zgrubne przeliczenie współrzędnych geograficznych na kilometry drogowe (współczynnik ok 85-95)
-            return Math.max(80, Math.floor(Math.sqrt(dx*dx + dy*dy) * 95));
+            const from = CITIES[c1];
+            const to = CITIES[c2];
+            const latDelta = (to.lat - from.lat) * Math.PI / 180;
+            const lonDelta = (to.lon - from.lon) * Math.PI / 180;
+            const a = Math.sin(latDelta / 2) ** 2 + Math.cos(from.lat * Math.PI / 180) * Math.cos(to.lat * Math.PI / 180) * Math.sin(lonDelta / 2) ** 2;
+            return Math.max(80, Math.floor(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1.18));
+        }
+
+        function findRoute(start, goal) {
+            if (start === goal) return [start];
+            const open = [{ city: start, cost: 0, estimate: getDistance(start, goal), path: [start] }];
+            const bestCosts = { [start]: 0 };
+            while (open.length) {
+                open.sort((a, b) => a.estimate - b.estimate);
+                const current = open.shift();
+                if (current.city === goal) return current.path;
+                (ROAD_GRAPH[current.city] || []).forEach(next => {
+                    const nextCost = current.cost + getDistance(current.city, next);
+                    if (bestCosts[next] === undefined || nextCost < bestCosts[next]) {
+                        bestCosts[next] = nextCost;
+                        open.push({ city: next, cost: nextCost, estimate: nextCost + getDistance(next, goal), path: current.path.concat(next) });
+                    }
+                });
+            }
+            return [start, goal];
+        }
         }
 
         function saveGame() {
@@ -418,28 +462,57 @@
 
         function cityPosition(city) {
             const cityData = CITIES[city];
-            const xs = Object.values(CITIES).map(c => c.x);
-            const ys = Object.values(CITIES).map(c => c.y);
-            return { left: 8 + ((cityData.x - Math.min(...xs)) / (Math.max(...xs) - Math.min(...xs))) * 84, top: 8 + ((Math.max(...ys) - cityData.y) / (Math.max(...ys) - Math.min(...ys))) * 84 };
+            const longitudes = Object.values(CITIES).map(city => city.lon);
+            const latitudes = Object.values(CITIES).map(city => city.lat);
+            return { left: 6 + ((cityData.lon - Math.min(...longitudes)) / (Math.max(...longitudes) - Math.min(...longitudes))) * 88, top: 8 + ((Math.max(...latitudes) - cityData.lat) / (Math.max(...latitudes) - Math.min(...latitudes))) * 84 };
+        }
+
+        function routePoint(route, progressRatio) {
+            if (!route || route.length === 0) return cityPosition('Warszawa');
+            if (route.length === 1) return cityPosition(route[0]);
+            const distances = route.slice(0, -1).map((city, index) => getDistance(city, route[index + 1]));
+            const routeDistance = distances.reduce((total, distance) => total + distance, 0);
+            let distanceAtPoint = Math.max(0, Math.min(1, progressRatio)) * routeDistance;
+            for (let index = 0; index < distances.length; index++) {
+                if (distanceAtPoint <= distances[index]) {
+                    const from = cityPosition(route[index]);
+                    const to = cityPosition(route[index + 1]);
+                    const segmentRatio = distances[index] ? distanceAtPoint / distances[index] : 0;
+                    return { left: from.left + (to.left - from.left) * segmentRatio, top: from.top + (to.top - from.top) * segmentRatio };
+                }
+                distanceAtPoint -= distances[index];
+            }
+            return cityPosition(route[route.length - 1]);
         }
 
         function renderDriverMap() {
             const map = document.getElementById('driver-map');
             if (!map) return;
-            let html = CITY_NAMES.map(city => { const p = cityPosition(city); return `<span class="map-city" style="left:${p.left}%;top:${p.top}%">${city}</span>`; }).join('');
+            const routesSvg = document.getElementById('map-routes');
+            const markers = document.getElementById('map-markers');
+            const renderedRoads = new Set();
+            let roadsHtml = '';
+            Object.entries(ROAD_GRAPH).forEach(([from, destinations]) => destinations.forEach(to => {
+                const roadId = [from, to].sort().join('|');
+                if (renderedRoads.has(roadId)) return;
+                renderedRoads.add(roadId);
+                const start = cityPosition(from); const end = cityPosition(to);
+                roadsHtml += `<line class="map-route-base" x1="${start.left}" y1="${start.top}" x2="${end.left}" y2="${end.top}"></line>`;
+            }));
             state.activeJobs.forEach(job => {
-                const from = cityPosition(job.origin); const to = cityPosition(job.destination);
-                const dx = to.left - from.left; const dy = to.top - from.top;
-                const length = Math.sqrt(dx * dx + dy * dy); const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-                html += `<span class="map-route" style="left:${from.left}%;top:${from.top}%;width:${length}%;transform:rotate(${angle}deg)"></span>`;
+                const route = job.route || findRoute(job.origin, job.destination);
+                const points = route.map(city => { const point = cityPosition(city); return `${point.left},${point.top}`; }).join(' ');
+                roadsHtml += `<polyline class="map-route-active" points="${points}"></polyline>`;
             });
+            routesSvg.innerHTML = roadsHtml;
+
+            let html = CITY_NAMES.map(city => { const p = cityPosition(city); return `<span class="map-city" style="left:${p.left}%;top:${p.top}%">${city}</span>`; }).join('');
             state.drivers.forEach(driver => {
                 const job = state.activeJobs.find(item => item.driverId === driver.id);
-                const currentCity = job ? (job.progress >= job.emptyDistance ? job.destination : job.origin) : driver.location;
-                const p = cityPosition(currentCity);
-                html += `<span class="driver-marker ${driver.status === 'Dostępny' ? 'available' : ''}" style="left:${p.left}%;top:${p.top}%" title="${driver.name} - ${driver.status}">${driver.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</span>`;
+                const p = job ? routePoint(job.route, job.progress / (job.emptyDistance + job.distance)) : cityPosition(driver.location);
+                html += `<span class="driver-marker ${driver.status === 'Dostępny' ? 'available' : ''}" style="left:${p.left}%;top:${p.top}%" title="${driver.name} - ${driver.status}">🚚</span>`;
             });
-            map.innerHTML = html || '<p style="padding:20px;color:#aaa">Zatrudnij kierowcę, aby zobaczyć go na mapie.</p>';
+            markers.innerHTML = html || '<p style="padding:20px;color:#aaa">Zatrudnij kierowcę, aby zobaczyć go na mapie.</p>';
         }
 
         function renderFinanceChart() {
@@ -524,6 +597,7 @@
                 ...job,
                 truckId, trailerId, driverId,
                 emptyDistance: emptyDist,
+                route: findRoute(driver.location, job.origin).concat(findRoute(job.origin, job.destination).slice(1)),
                 progress: 0,
                 finished: false
             });
